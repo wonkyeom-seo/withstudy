@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     Int       @id @default(autoincrement())
+  studentId              String    @unique @map("student_id")
+  password               String
+  name                   String
+  status                 String    @default("pending")
+  profileImg             String?   @map("profile_img")
+  links                  String?
+  statusMessage          String?   @map("status_message")
+  statusMessageExpiresAt DateTime? @map("status_message_expires_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  studyLogs              StudyLog[]
+  reportsMade            Report[]  @relation("ReportsMade")
+  reportsReceived        Report[]  @relation("ReportsReceived")
+
+  @@map("users")
+}
+
+model StudyLog {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  dateKey      String    @map("date_key")
+  totalSeconds Int       @default(0) @map("total_seconds")
+  isStudying   Boolean   @default(false) @map("is_studying")
+  lastImage    String?   @map("last_image")
+  lastActiveAt DateTime? @map("last_active_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots    Snapshot[]
+
+  @@unique([userId, dateKey])
+  @@index([dateKey, totalSeconds])
+  @@map("study_logs")
+}
+
+model Snapshot {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  studyLogId Int      @map("study_log_id")
+  filePath   String   @map("file_path")
+  createdAt  DateTime @default(now()) @map("created_at")
+  studyLog   StudyLog @relation(fields: [studyLogId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("snapshots")
+}
+
+model Report {
+  id         Int      @id @default(autoincrement())
+  reporterId Int      @map("reporter_id")
+  targetId   Int      @map("target_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  reporter   User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  target     User     @relation("ReportsReceived", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([reporterId, createdAt])
+  @@index([targetId, createdAt])
+  @@map("reports")
+}
